@@ -1,0 +1,67 @@
+/* PII Selector Content Script Styles */
+
+/* Element selection mode */
+body.dp-pii-selecting {
+  cursor: crosshair !important;
+}
+
+body.dp-pii-selecting * {
+  cursor: crosshair !important;
+}
+
+/* Hover state during selection */
+.dp-pii-hover {
+  outline: 3px dashed #007bff !important;
+  outline-offset: 2px !important;
+  background-color: rgba(0, 123, 255, 0.15) !important;
+  position: relative !important;
+  z-index: 999999 !important;
+  cursor: crosshair !important;
+}
+
+/* Selected element highlight */
+.dp-pii-selected {
+  outline: 4px solid #28a745 !important;
+  outline-offset: 3px !important;
+  background-color: rgba(40, 167, 69, 0.2) !important;
+  position: relative !important;
+  z-index: 999998 !important;
+}
+
+/* Preview states */
+.dp-pii-preview-block {
+  background-color: #000 !important;
+  color: #fff !important;
+  position: relative !important;
+}
+
+.dp-pii-preview-block::after {
+  content: "BLOCKED" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  color: #fff !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+  text-shadow: 0 0 3px #000 !important;
+  pointer-events: none !important;
+  z-index: 10000 !important;
+}
+
+.dp-pii-preview-mask {
+  position: relative !important;
+}
+
+.dp-pii-preview-mask * {
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(0,0,0,0.5) !important;
+}
+
+.dp-pii-preview-ignore {
+  outline: 2px dotted #ffc107 !important;
+  outline-offset: 2px !important;
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+ 
