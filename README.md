@@ -2,6 +2,8 @@
 
 A Chrome extension designed to help privacy teams easily identify and block Personally Identifiable Information (PII) from session replays using CSS selectors.
 
+<img width="1521" height="838" alt="Screenshot 2025-07-28 at 3 24 15 PM" src="https://github.com/user-attachments/assets/95ea8cac-be38-435a-943f-77f837dda735" />
+
 ## Why Do You Need This?
 
 Session replay tools capture all data on a web page, including sensitive information like:
