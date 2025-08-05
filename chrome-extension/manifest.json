@@ -24,7 +24,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["finder-bundle.js", "pii-selector.js"],
+      "js": ["constants.js", "finder-bundle.js", "ai-selector.js", "pii-selector.js"],
       "css": ["pii-selector.css"],
       "run_at": "document_end",
       "all_frames": false

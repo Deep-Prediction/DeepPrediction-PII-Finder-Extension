@@ -3,6 +3,10 @@
 let currentTab = null;
 let selectorMode = false;
 let lastUrl = null;
+let selectorStrategy = 'smart'; // Default strategy: 'smart', 'semantic', or 'structural'
+let geminiApiKey = null;
+let aiModel = 'gemini-1.5-flash';
+let enableSmartAI = true;
 
 // Check if tutorial has been shown before
 async function hasShownTutorial() {
@@ -33,12 +37,40 @@ async function sendMessageToTab(tabId, message) {
       return null;
     }
     
-    // Send the message
-    const response = await chrome.tabs.sendMessage(tabId, message);
-    return response;
+    // Try to send the message first
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, message);
+      return response;
+    } catch (sendError) {
+      // Content script might not be injected, try to inject it
+      console.log('Content script not loaded, injecting now...');
+      
+      try {
+        // Inject the required scripts (in order)
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['constants.js', 'finder-bundle.js', 'ai-selector.js', 'pii-selector.js']
+        });
+        
+        // Inject the CSS
+        await chrome.scripting.insertCSS({
+          target: { tabId: tabId },
+          files: ['pii-selector.css']
+        });
+        
+        // Wait a bit for scripts to initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Try sending the message again
+        const response = await chrome.tabs.sendMessage(tabId, message);
+        return response;
+      } catch (injectError) {
+        console.error('Failed to inject content scripts:', injectError);
+        return null;
+      }
+    }
   } catch (error) {
-    // This is expected for pages where content script isn't loaded
-    console.log('Message sending failed (this is normal for some pages):', error.message);
+    console.log('Message sending failed:', error.message);
     
     // Log more details for debugging
     if (error.message && error.message.includes('Could not establish connection')) {
@@ -54,6 +86,30 @@ async function sendMessageToTab(tabId, message) {
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await refreshCurrentTab();
+  
+  // Load saved preferences
+  chrome.storage.local.get(['preferredStrategy', 'geminiApiKey', 'aiModel', 'enableSmartAI'], (result) => {
+    // Load strategy preference
+    if (result.preferredStrategy) {
+      selectorStrategy = result.preferredStrategy;
+      // Update UI to reflect saved preference
+      document.querySelectorAll('.strategy-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.strategy === selectorStrategy);
+      });
+      console.log('Loaded saved strategy preference:', selectorStrategy);
+    }
+    
+    // Load API settings
+    if (result.geminiApiKey) {
+      geminiApiKey = result.geminiApiKey;
+    }
+    if (result.aiModel) {
+      aiModel = result.aiModel;
+    }
+    if (result.enableSmartAI !== undefined) {
+      enableSmartAI = result.enableSmartAI;
+    }
+  });
   
   // Set up event listeners
   setupEventListeners();
@@ -167,6 +223,37 @@ function showSpecialPageWarning() {
 
 // Set up all event listeners
 function setupEventListeners() {
+  // Strategy selector buttons
+  document.querySelectorAll('.strategy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      // Update active state visually
+      document.querySelectorAll('.strategy-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      
+      // Store the selected strategy
+      selectorStrategy = e.target.dataset.strategy;
+      console.log('Strategy selected:', selectorStrategy);
+      
+      // Save preference to storage for persistence
+      chrome.storage.local.set({ preferredStrategy: selectorStrategy });
+      
+      // TODO: Implement strategy functionality in finder-bundle.js
+      // For now, just visual feedback and storage
+    });
+  });
+  
+  // Info icon tooltip (optional enhancement)
+  const infoIcon = document.querySelector('.info-icon');
+  if (infoIcon) {
+    infoIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('Selector Strategies:\n\n' +
+            '• Smart: Automatically chooses the best approach\n' +
+            '• Semantic: Uses classes and attributes (flexible)\n' +
+            '• Structural: Uses precise DOM position (exact)');
+    });
+  }
+  
   // Accordion functionality
   const accordionHeader = document.getElementById('manualAccordionHeader');
   const accordionContent = document.getElementById('manualAccordionContent');
@@ -187,8 +274,11 @@ function setupEventListeners() {
   // Clear all selectors
   document.getElementById('clearAllSelectors').addEventListener('click', clearAllSelectors);
   
-  // Copy all selectors button
+  // Copy all selectors button (raw format for testing)
   document.getElementById('copyAllSelectors').addEventListener('click', copyAllSelectors);
+  
+  // Copy all selectors for database button (with proper escaping)
+  document.getElementById('copyDbSelectors').addEventListener('click', copyAllSelectorsForDatabase);
   
   // Tutorial Got It button
   document.getElementById('tutorialGotIt').addEventListener('click', () => {
@@ -217,12 +307,109 @@ function setupEventListeners() {
   });
   
   // Listen for messages from content script
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'selectorChosen') {
-      handleSelectorChosen(request.selector, request.alternatives);
-    } else if (request.action === 'selectionCancelled') {
-      stopSelectorMode();
-    }
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Handle model upgrade recommendations
+  if (request.action === 'modelUpgradeRecommended') {
+    // Show a notification to the user
+    const showUpgradeNotification = () => {
+      const info = document.querySelector('.info');
+      const notification = document.createElement('div');
+      notification.className = 'model-upgrade-notice';
+      notification.innerHTML = `
+        <strong>💡 Model Upgrade Suggested</strong><br>
+        ${request.reason} detected. Consider using <strong>${request.suggestedModel}</strong> for better results.<br>
+        <button onclick="this.parentElement.remove()" style="margin-top: 8px; padding: 4px 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer;">Dismiss</button>
+      `;
+      notification.style.cssText = 'background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin-bottom: 12px;';
+      info.parentElement.insertBefore(notification, info);
+      
+      // Auto-dismiss after 10 seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 10000);
+    };
+    
+    // Show the notification
+    showUpgradeNotification();
+    
+    return true;
+  }
+  
+      // Handle AI selector status updates
+  if (request.action === 'aiSelectorStatus') {
+    const showAIStatus = () => {
+      // Remove any existing status notification first
+      const existingStatus = document.querySelector('.ai-status-notification');
+      if (existingStatus) existingStatus.remove();
+      
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'ai-status-notification';
+      
+      if (request.status === 'calling') {
+        statusDiv.innerHTML = `
+          <span style="display: inline-block;">🤖</span> ${request.message || 'Calling Gemini AI...'}
+        `;
+        statusDiv.style.cssText = 'background: #e0e7ff; border: 1px solid #6366f1; color: #312e81;';
+      } else if (request.status === 'success') {
+        const duration = request.duration ? ` (${request.duration}ms)` : '';
+        statusDiv.innerHTML = `
+          <span style="color: #10b981;">✓</span> AI selector generated${duration}
+          <span style="font-size: 11px; opacity: 0.8;"> - confidence: ${Math.round((request.confidence || 0.8) * 100)}%</span>
+        `;
+        statusDiv.style.cssText = 'background: #d1fae5; border: 1px solid #10b981; color: #065f46;';
+      } else if (request.status === 'error') {
+        const errorMessage = request.error.includes('Token limit') ? 'Context too large' :
+                           request.error.includes('API key') ? 'Invalid API key' :
+                           request.error.includes('Rate limit') ? 'Rate limit hit' :
+                           'AI unavailable';
+        
+        statusDiv.innerHTML = `
+          <span style="color: #f59e0b;">⚠</span> ${errorMessage} - using smart heuristics instead
+        `;
+        statusDiv.style.cssText = 'background: #fef3c7; border: 1px solid #f59e0b; color: #92400e;';
+      }
+      
+      statusDiv.style.cssText += 'padding: 8px 12px; border-radius: 6px; margin: 8px 16px; font-size: 13px; animation: slideIn 0.3s ease;';
+      
+      // Add to the UI (try multiple locations)
+      const strategySection = document.querySelector('.selector-strategy');
+      const infoSection = document.querySelector('.info');
+      const container = document.querySelector('.container');
+      
+      const targetElement = strategySection || infoSection || container;
+      
+      if (targetElement) {
+        // Remove any existing status
+        const existingStatus = document.querySelector('.ai-status-notification');
+        if (existingStatus) existingStatus.remove();
+        
+        if (strategySection) {
+          strategySection.insertAdjacentElement('afterend', statusDiv);
+        } else if (infoSection) {
+          infoSection.insertAdjacentElement('beforebegin', statusDiv);
+        } else {
+          targetElement.insertAdjacentElement('afterbegin', statusDiv);
+        }
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          statusDiv.style.animation = 'fadeOut 0.3s ease';
+          setTimeout(() => statusDiv.remove(), 300);
+        }, 5000);
+      } else {
+        console.error('Could not find element to attach AI status notification');
+      }
+    };
+    
+    showAIStatus();
+    return true;
+  }
+  
+  if (request.action === 'selectorChosen') {
+    handleSelectorChosen(request.selector, request.alternatives);
+  } else if (request.action === 'selectionCancelled') {
+    stopSelectorMode();
+  }
   });
   
   // Listen for tab changes
@@ -230,6 +417,124 @@ function setupEventListeners() {
     // Auto-refresh when tab changes
     await refreshCurrentTab();
   });
+  
+  // Settings modal event listeners
+  setupSettingsModal();
+}
+
+// Set up settings modal functionality
+function setupSettingsModal() {
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsModal = document.getElementById('settingsModal');
+  const settingsClose = document.getElementById('settingsClose');
+  const settingsCancel = document.getElementById('settingsCancel');
+  const settingsSave = document.getElementById('settingsSave');
+  const geminiApiKeyInput = document.getElementById('geminiApiKey');
+  const aiModelSelect = document.getElementById('aiModel');
+  const enableSmartAICheckbox = document.getElementById('enableSmartAI');
+  const apiStatus = document.getElementById('apiStatus');
+  
+  // Open settings modal
+  settingsBtn?.addEventListener('click', () => {
+    settingsModal.classList.add('active');
+    
+    // Load current settings into the form
+    geminiApiKeyInput.value = geminiApiKey || '';
+    aiModelSelect.value = aiModel;
+    enableSmartAICheckbox.checked = enableSmartAI;
+    
+    // Show API key status if we have a key
+    if (geminiApiKey) {
+      apiStatus.style.display = 'inline-block';
+      apiStatus.textContent = 'Configured';
+      apiStatus.className = 'api-status valid';
+    } else {
+      apiStatus.style.display = 'none';
+    }
+  });
+  
+  // Close settings modal
+  const closeSettings = () => {
+    settingsModal.classList.remove('active');
+  };
+  
+  settingsClose?.addEventListener('click', closeSettings);
+  settingsCancel?.addEventListener('click', closeSettings);
+  
+  // Click outside to close
+  settingsModal?.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      closeSettings();
+    }
+  });
+  
+  // Save settings
+  settingsSave?.addEventListener('click', async () => {
+    const newApiKey = geminiApiKeyInput.value.trim();
+    const newAiModel = aiModelSelect.value;
+    const newEnableSmartAI = enableSmartAICheckbox.checked;
+    
+    // Validate API key if provided
+    if (newApiKey) {
+      // Show checking status
+      apiStatus.style.display = 'inline-block';
+      apiStatus.textContent = 'Validating...';
+      apiStatus.className = 'api-status checking';
+      
+      // Test the API key with a simple request
+      const isValid = await validateGeminiApiKey(newApiKey);
+      
+      if (!isValid) {
+        apiStatus.textContent = 'Invalid API Key';
+        apiStatus.className = 'api-status invalid';
+        return;
+      }
+      
+      apiStatus.textContent = 'Valid';
+      apiStatus.className = 'api-status valid';
+    }
+    
+    // Save settings
+    geminiApiKey = newApiKey;
+    aiModel = newAiModel;
+    enableSmartAI = newEnableSmartAI;
+    
+    await chrome.storage.local.set({
+      geminiApiKey: geminiApiKey,
+      aiModel: aiModel,
+      enableSmartAI: enableSmartAI
+    });
+    
+    console.log('Settings saved:', { 
+      hasApiKey: !!geminiApiKey, 
+      aiModel, 
+      enableSmartAI 
+    });
+    
+    // Close modal after successful save
+    setTimeout(closeSettings, 500);
+  });
+  
+  // Show/hide password toggle (optional enhancement)
+  geminiApiKeyInput?.addEventListener('focus', function() {
+    this.type = 'text';
+  });
+  
+  geminiApiKeyInput?.addEventListener('blur', function() {
+    this.type = 'password';
+  });
+}
+
+// Validate Gemini API key
+async function validateGeminiApiKey(apiKey) {
+  try {
+    // Test the API key with a simple request to Gemini
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    return response.ok;
+  } catch (error) {
+    console.error('Error validating API key:', error);
+    return false;
+  }
 }
 
 // Test manual selector
@@ -320,10 +625,11 @@ async function startSelectorMode() {
   document.getElementById('startSelector').style.display = 'none';
   document.getElementById('stopSelector').style.display = 'block';
   
-  // Send message to content script (always use 'block' type)
+  // Send message to content script with selected strategy
   const response = await sendMessageToTab(currentTab.id, {
     action: 'startSelectorMode',
-    type: 'block'
+    type: 'block',
+    strategy: selectorStrategy  // Pass the selected strategy
   });
   
   if (!response) {
@@ -508,7 +814,14 @@ async function removeSelector(index) {
     selectors.splice(index, 1);
     await chrome.storage.local.set({ [key]: selectors });
     
-    // Reload display and reapply
+    // Clear current highlights first
+    if (currentTab.id) {
+      await sendMessageToTab(currentTab.id, {
+        action: 'clearSelectors'
+      });
+    }
+    
+    // Reload display and reapply the remaining selectors
     await loadSavedSelectors();
   } catch (error) {
     console.error('Error removing selector:', error);
@@ -526,23 +839,72 @@ async function clearAllSelectors() {
     const hostname = url.hostname;
     const key = `selectors_${hostname}`;
     
+    // First, clear from storage
     await chrome.storage.local.remove(key);
     
-    // Clear from page
+    // Clear from page - send message multiple times to ensure it's received
     if (currentTab.id) {
+      // Send clear message
       await sendMessageToTab(currentTab.id, {
         action: 'clearSelectors'
       });
+      
+      // Send empty selectors to override any pending applies
+      setTimeout(async () => {
+        await sendMessageToTab(currentTab.id, {
+          action: 'applySelectors',
+          selectors: []
+        });
+      }, 100);
     }
     
-    // Reload display
+    // Clear the selector list display immediately
+    const selectorList = document.getElementById('selectorList');
+    if (selectorList) {
+      selectorList.innerHTML = '';
+    }
+    
+    // Reload display (which should now show empty)
     await loadSavedSelectors();
   } catch (error) {
     console.error('Error clearing selectors:', error);
   }
 }
 
-// Copy all selectors to clipboard
+// Helper function to escape selectors for database/rrweb usage
+function escapeForDatabase(selector) {
+  // Characters that need escaping when used in identifiers (not as CSS syntax)
+  const specialChars = /[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g;
+  
+  // Handle ID escaping (everything after #)
+  selector = selector.replace(/#([^.\s\[>+~]+)/g, function(match, id) {
+    // Check if ID starts with a digit (needs special handling)
+    if (/^\d/.test(id)) {
+      // Escape the first digit using unicode escape
+      const firstChar = id.charCodeAt(0).toString(16);
+      const rest = id.slice(1).replace(specialChars, '\\$&');
+      return '#\\' + firstChar + ' ' + rest;
+    }
+    // Escape special characters in the ID
+    return '#' + id.replace(specialChars, '\\$&');
+  });
+  
+  // Handle class name escaping (everything after .)
+  selector = selector.replace(/\.([^.\s\[>+~:#]+)/g, function(match, className) {
+    // Check if class starts with a digit
+    if (/^\d/.test(className)) {
+      const firstChar = className.charCodeAt(0).toString(16);
+      const rest = className.slice(1).replace(specialChars, '\\$&');
+      return '.\\' + firstChar + ' ' + rest;
+    }
+    // Escape special characters in the class name
+    return '.' + className.replace(specialChars, '\\$&');
+  });
+  
+  return selector;
+}
+
+// Copy all selectors to clipboard (raw format for DevTools testing)
 async function copyAllSelectors() {
   if (!currentTab || !currentTab.url) return;
   
@@ -580,6 +942,47 @@ async function copyAllSelectors() {
   } catch (error) {
     console.error('Error copying selectors:', error);
     alert('Failed to copy selectors');
+  }
+}
+
+// Copy all selectors for database (with proper escaping for rrweb)
+async function copyAllSelectorsForDatabase() {
+  if (!currentTab || !currentTab.url) return;
+  
+  try {
+    const url = new URL(currentTab.url);
+    const hostname = url.hostname;
+    const key = `selectors_${hostname}`;
+    
+    const result = await chrome.storage.local.get(key);
+    const selectors = result[key] || [];
+    
+    if (selectors.length === 0) {
+      alert('No selectors to copy');
+      return;
+    }
+    
+    // Format selectors with escaping for database/rrweb usage
+    const escapedSelectors = selectors.map(item => escapeForDatabase(item.selector));
+    const text = JSON.stringify(escapedSelectors, null, 2);
+    
+    // Copy to clipboard
+    await navigator.clipboard.writeText(text);
+    
+    // Visual feedback
+    const copyBtn = document.getElementById('copyDbSelectors');
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    copyBtn.style.background = '#10b981';
+    
+    setTimeout(() => {
+      copyBtn.textContent = originalText;
+      copyBtn.style.background = '';
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Error copying selectors for database:', error);
+    alert('Failed to copy selectors for database');
   }
 }
 

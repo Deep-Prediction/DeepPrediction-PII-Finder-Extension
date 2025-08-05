@@ -18,6 +18,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     });
     return true;
+  } else if (request.action === "getAISettings") {
+    // Get AI settings for smart selector
+    chrome.storage.local.get(['geminiApiKey', 'aiModel', 'enableSmartAI'], (result) => {
+      sendResponse({
+        apiKey: result.geminiApiKey || null,
+        model: result.aiModel || 'gemini-1.5-flash',
+        enableAI: result.enableSmartAI !== false // Default to true
+      });
+    });
+    return true;
   } else if (request.action === "getSavedSelectors" && sender.tab) {
     // Get saved selectors for the current site
     const hostname = new URL(sender.tab.url).hostname;

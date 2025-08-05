@@ -21,6 +21,7 @@
       margin-bottom: 16px;
       padding-bottom: 16px;
       border-bottom: 1px solid #e5e7eb;
+      position: relative;
     }
     
     .logo {
@@ -314,10 +315,9 @@
       margin: 20px 0;
     }
     
-    .copy-all-button {
+    .copy-all-button, .copy-db-button {
       padding: 6px 12px;
       font-size: 12px;
-      background: #8b5cf6;
       color: white;
       border: none;
       border-radius: 6px;
@@ -326,8 +326,20 @@
       font-weight: 500;
     }
     
+    .copy-all-button {
+      background: #8b5cf6;
+    }
+    
+    .copy-db-button {
+      background: #059669;
+    }
+    
     .copy-all-button:hover {
       background: #7c3aed;
+    }
+    
+    .copy-db-button:hover {
+      background: #047857;
     }
     
     .copy-button {
@@ -378,6 +390,307 @@
     .dp-promo-link:hover {
       color: #7c3aed;
     }
+    
+    /* Strategy Selector Styles */
+    .strategy-selector {
+      margin-bottom: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .strategy-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .info-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #9ca3af;
+      background: white;
+      color: #6b7280;
+      font-size: 10px;
+      cursor: help;
+      transition: all 0.2s;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .info-icon:hover {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
+    
+    .strategy-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    
+    .strategy-btn {
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      background: white;
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .strategy-btn:hover {
+      border-color: #8b5cf6;
+      color: #7c3aed;
+      background: #f9f6ff;
+    }
+    
+    .strategy-btn.active {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
+    
+    .strategy-btn.active:hover {
+      background: #7c3aed;
+      border-color: #7c3aed;
+    }
+    
+    /* Settings Button */
+    .settings-btn {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .settings-btn:hover {
+      background: #f3f4f6;
+      border-color: #8b5cf6;
+    }
+    
+    /* Settings Modal */
+    .settings-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .settings-modal.active {
+      display: flex;
+    }
+    
+    .settings-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .settings-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+    
+    .settings-close {
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    
+    .settings-close:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+    
+    .settings-section {
+      margin-bottom: 24px;
+    }
+    
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+    
+    .settings-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .settings-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      transition: all 0.2s;
+      box-sizing: border-box;
+    }
+    
+    .settings-input:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+    
+    .settings-help {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    
+    .settings-help a {
+      color: #8b5cf6;
+      text-decoration: none;
+    }
+    
+    .settings-help a:hover {
+      text-decoration: underline;
+    }
+    
+    .settings-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .settings-save {
+      flex: 1;
+      padding: 10px 20px;
+      background: #8b5cf6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .settings-save:hover {
+      background: #7c3aed;
+    }
+    
+    .settings-cancel {
+      flex: 1;
+      padding: 10px 20px;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .settings-cancel:hover {
+      background: #e5e7eb;
+    }
+    
+    .api-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-left: 8px;
+    }
+    
+    .api-status.valid {
+      background: #d1fae5;
+      color: #059669;
+    }
+    
+    .api-status.invalid {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    
+    .api-status.checking {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+    /* AI Status Notification Animations */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -385,6 +698,9 @@
     <div class="header">
       <div class="logo"></div>
       <h1>DeepPrediction PII Finder</h1>
+      <button class="settings-btn" id="settingsBtn" title="Settings">
+        ⚙️
+      </button>
     </div>
     
     <div class="current-site">
@@ -394,6 +710,29 @@
     
     <!-- Primary Action Button -->
     <div class="section">
+      <!-- Selector Strategy Toggle -->
+      <div class="strategy-selector">
+        <label class="strategy-label">
+          Selector Strategy
+          <button class="info-icon" title="Learn more about selector strategies">?</button>
+        </label>
+        <div class="strategy-buttons">
+          <button class="strategy-btn active" data-strategy="smart" 
+                  title="Automatically chooses the best selector type">
+            Smart
+          </button>
+          <button class="strategy-btn" data-strategy="semantic"
+                  title="Prefers classes and attributes - survives layout changes">
+            Semantic
+          </button>
+          <button class="strategy-btn" data-strategy="structural"
+                  title="Uses precise position - may break if page structure changes">
+            Structural
+          </button>
+        </div>
+      </div>
+      
+      <!-- Visual Selection Button -->
       <button class="button primary" id="startSelector">
         🎯 Start Visual Selection
       </button>
@@ -432,6 +771,9 @@
         <div style="display: flex; gap: 8px;">
           <button class="copy-all-button" id="copyAllSelectors" title="Copy all selectors">
             Copy
+          </button>
+          <button class="copy-db-button" id="copyDbSelectors" title="Copy for database/rrweb with proper escaping">
+            Copy for DB
           </button>
           <button class="clear-button" id="clearAllSelectors" title="Clear all selectors">
             Clear
@@ -473,6 +815,62 @@
         <strong>4.</strong> Press ESC anytime to cancel selection
       </p>
       <button class="button primary" id="tutorialGotIt">Got it!</button>
+    </div>
+  </div>
+  
+  <!-- Settings Modal -->
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-content">
+      <div class="settings-header">
+        <h2 class="settings-title">Settings</h2>
+        <button class="settings-close" id="settingsClose">×</button>
+      </div>
+      
+      <div class="settings-section">
+        <label class="settings-label">
+          Gemini API Key
+          <span class="api-status" id="apiStatus" style="display: none;"></span>
+        </label>
+        <input 
+          type="password" 
+          class="settings-input" 
+          id="geminiApiKey" 
+          placeholder="Enter your Gemini API key"
+          autocomplete="off"
+        />
+        <div class="settings-help">
+          Used for AI-powered smart selector generation. 
+          <a href="https://makersuite.google.com/app/apikey" target="_blank">Get your API key here →</a>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <label class="settings-label">AI Model</label>
+        <select class="settings-input" id="aiModel">
+          <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (Recommended)</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro (Advanced)</option>
+          <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+        </select>
+        <div class="settings-help">
+          <strong>Flash 1.5:</strong> Fast (2-3 sec), great for most sites, 1M token context<br>
+          <strong>Pro 1.5:</strong> Best quality, complex reasoning, 2M tokens, slower (5-8 sec)<br>
+          <strong>Flash 2.0:</strong> Newest model, experimental features, very fast
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <label class="settings-label">
+          <input type="checkbox" id="enableSmartAI" checked> Enable AI for Smart Selection
+        </label>
+        <div class="settings-help">
+          When disabled, Smart selection will use advanced heuristics without AI.
+        </div>
+      </div>
+      
+      <div class="settings-actions">
+        <button class="settings-cancel" id="settingsCancel">Cancel</button>
+        <button class="settings-save" id="settingsSave">Save Settings</button>
+      </div>
     </div>
   </div>
   
